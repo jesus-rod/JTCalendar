@@ -22,6 +22,8 @@ class ViewController: UIViewController {
     var firstDate: Date?
     var secondDate: Date?
 
+    @IBOutlet weak var bottomView: UIView!
+    @IBOutlet weak var bottomViewHeight: NSLayoutConstraint!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -34,7 +36,8 @@ class ViewController: UIViewController {
             self.setupViewsOfCalendar(from: visibleDates)
         }
         
-        
+        bottomView.isHidden = true
+        bottomViewHeight.constant = 0
         
     }
 
@@ -43,7 +46,7 @@ class ViewController: UIViewController {
     }
     
     func setupCalendarView() {
-        calendarView.scrollToHeaderForDate( Date() )
+        calendarView.scrollToDate( Date() )
         calendarView.allowsMultipleSelection  = true
         calendarView.isRangeSelectionUsed = true
         calendarView.scrollDirection = .vertical
@@ -66,9 +69,50 @@ class ViewController: UIViewController {
         
     }
 
-    func compareSelectedDates() {
-        
+    func orderSelectedDates(withDates dates: [Date]) -> [Date]{
+        let sortedDates = dates.sorted { $0 < $1 }
+        return sortedDates
     }
+    
+    @IBAction func resetDatepickerButtonPressed(_ sender: UIButton) {
+        resetDatepicker()
+    }
+    
+    func resetDatepicker() {
+        hideBottomView()
+        calendarView.deselectAllDates()
+        firstDate = nil
+        secondDate = nil
+    }
+    
+    func hideBottomView() {
+        //call animation for the bottom view
+        UIView.animate(withDuration: 1, delay: 0, usingSpringWithDamping: 1, initialSpringVelocity: 1, options: .curveEaseOut, animations: {
+            
+            self.bottomView.isHidden = true
+            self.bottomViewHeight.constant = 0
+            self.view.layoutIfNeeded()
+            
+        }, completion: { (completed) in
+            
+        })
+    }
+    
+    func showBottomView() {
+        //call animation for the bottom view
+        UIView.animate(withDuration: 1, delay: 0, usingSpringWithDamping: 1, initialSpringVelocity: 1, options: .curveEaseOut, animations: {
+            
+            self.bottomView.isHidden = false
+            self.bottomViewHeight.constant = 160
+            self.view.layoutIfNeeded()
+            
+        }, completion: { (completed) in
+            
+            
+            
+        })
+    }
+    
 }
 
 extension ViewController: JTAppleCalendarViewDataSource {
@@ -92,29 +136,11 @@ extension ViewController: JTAppleCalendarViewDataSource {
                                                  firstDayOfWeek: .monday)
         return parameters
     }
-    
-    
-    func handleCellConfiguration(cell: JTAppleCell?, cellState: CellState) {
-        handleCellSelection(view: cell, cellState: cellState)
-//        handleCellTextColor(view: cell, cellState: cellState)
-    }
-    
-    // Function to handle the text color of the calendar
-    func handleCellTextColor(view: JTAppleCell?, cellState: CellState) {
-        
-        guard let myCustomCell = view as? JTCollectionViewCell  else { return }
-        
-        if myCustomCell.isSelected {
-            myCustomCell.dateLabel.textColor = .white
-        } else {
-            myCustomCell.dateLabel.textColor = .black
-        }
-    }
+
     
     func handleCellSelection(view: JTAppleCell?, cellState: CellState) {
+        
         guard let myCustomCell = view as? JTCollectionViewCell else {return }
-        
-        
         switch cellState.selectedPosition() {
         case .full, .left, .right:
             myCustomCell.dateLabel.textColor = .white
@@ -130,11 +156,6 @@ extension ViewController: JTAppleCalendarViewDataSource {
             myCustomCell.selectedView.backgroundColor = nil // Have no selection when a cell is not selected
         }
         
-//        if cellState.isSelected {
-//            myCustomCell.selectedView.isHidden = false
-//        } else {
-//            myCustomCell.selectedView.isHidden = true
-//        }
     }
 
     
@@ -162,6 +183,7 @@ extension ViewController: JTAppleCalendarViewDataSource {
     
     
     
+    
 }
 
 extension ViewController: JTAppleCalendarViewDelegate {
@@ -177,41 +199,65 @@ extension ViewController: JTAppleCalendarViewDelegate {
             cell.isHidden = true
         }
         
-        print(cellState.text)
-        
-        handleCellConfiguration(cell: cell, cellState: cellState)
+        handleCellSelection(view: cell, cellState: cellState)
         return cell
     }
     
     
     func calendar(_ calendar: JTAppleCalendarView, didSelectDate date: Date, cell: JTAppleCell?, cellState: CellState) {
-//        handleCellConfiguration(cell: cell, cellState: cellState)
         
         
         //first date was selected before, so lets pick a second date
         if firstDate != nil && secondDate == nil {
+            
             secondDate = date
-            calendarView.selectDates(from: firstDate!, to: date,  triggerSelectionDelegate: false, keepSelectionIfMultiSelectionAllowed: true)
+            guard let firstDate = firstDate, let secondDate = secondDate else { return }
+            
+            let orderedLimits = orderSelectedDates(withDates: [firstDate, secondDate])
+            calendarView.selectDates(from: orderedLimits[0], to: orderedLimits[1],  triggerSelectionDelegate: false, keepSelectionIfMultiSelectionAllowed: true)
+            
+            
+            
+            //call animation for the bottom view
+            showBottomView()
+            
+            
+            
         } else if firstDate != nil {
             //there is a date range selected, lets start a new range
             calendarView.deselectAllDates()
             firstDate = date
             calendarView.selectDates([date], triggerSelectionDelegate: false, keepSelectionIfMultiSelectionAllowed: false)
             secondDate = nil
+            hideBottomView()
         } else {
             //nothing has been chosen, let's pick the first date
             firstDate = date
         }
         
-        print("--->", firstDate)
-        print("--->", secondDate)
-        
         handleCellSelection(view: cell, cellState: cellState)
         
     }
     
+    func calendar(_ calendar: JTAppleCalendarView, shouldDeselectDate date: Date, cell: JTAppleCell?, cellState: CellState) -> Bool {
+        
+        print("-->")
+        if firstDate != nil && secondDate != nil {
+            resetDatepicker()
+            firstDate = date
+            calendarView.selectDates([date], triggerSelectionDelegate: false, keepSelectionIfMultiSelectionAllowed: false)
+            hideBottomView()
+            return false
+        } else {
+            return true
+        }
+        
+        
+    }
+    
     func calendar(_ calendar: JTAppleCalendarView, didDeselectDate date: Date, cell: JTAppleCell?, cellState: CellState) {
-//        handleCellConfiguration(cell: cell, cellState: cellState)
+        
+        
         handleCellSelection(view: cell, cellState: cellState)
     }
     
