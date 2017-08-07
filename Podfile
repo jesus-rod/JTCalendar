@@ -6,6 +6,6 @@ target 'calendarTest' do
   use_frameworks!
 
   # Pods for calendarTest
-  pod 'JTAppleCalendar', '~> 7.0'
+  pod 'JTAppleCalendar', '~> 7.0.6’
 
 end

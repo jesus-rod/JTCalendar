@@ -135,7 +135,7 @@ struct CalendarData {
 }
 
 /// Defines a month structure.
-struct Month {
+public struct Month {
 
     /// Start index day for the month.
     /// The start is total number of days of previous months
@@ -150,22 +150,22 @@ struct Month {
     let sections: [Int]
 
     /// Number of inDates for this month
-    let inDates: Int
+    public let inDates: Int
 
     /// Number of outDates for this month
-    let outDates: Int
+    public let outDates: Int
 
     /// Maps a section to the index in the total number of sections
     let sectionIndexMaps: [Int: Int]
 
     /// Number of rows for the month
-    let rows: Int
+    public let rows: Int
     
     /// Name of the month
-    let name: MonthsOfYear
+    public let name: MonthsOfYear
 
     // Return the total number of days for the represented month
-    var numberOfDaysInMonth: Int
+    public let numberOfDaysInMonth: Int
 
     // Return the total number of day cells
     // to generate for the represented month
@@ -176,20 +176,6 @@ struct Month {
     var startSection: Int {
         return sectionIndexMaps.keys.min()!
     }
-
-//    func firstIndexPathForExternal(section: Int) -> IndexPath? {
-//        guard let internalSection = sectionIndexMaps[section] else {
-//            return nil
-//        }
-//        if internalSection == 0 {
-//            // Then we need to consider predates
-//            return indexPath(forDay: 1 - inDates)
-//        } else {
-//            let startDay = startDayFor(section: internalSection)!
-//            let path = indexPath(forDay: startDay)
-//            return path
-//        }
-//    }
     
     // Return the section in which a day is contained
     func indexPath(forDay number: Int) -> IndexPath? {

@@ -79,7 +79,6 @@ open class JTAppleCalendarView: UICollectionView {
     var delayedExecutionClosure: [(() -> Void)] = []
     let dateGenerator = JTAppleDateConfigGenerator()
     
-        
     /// Implemented by subclasses to initialize a new object (the receiver) immediately after memory for it has been allocated.
     public init() {
         super.init(frame: .zero, collectionViewLayout: UICollectionViewFlowLayout())
@@ -87,11 +86,12 @@ open class JTAppleCalendarView: UICollectionView {
     }
     
     /// Initializes and returns a newly allocated collection view object with the specified frame and layout.
+    @available(*, unavailable, message: "Please use JTAppleCalendarView() instead. It manages its own layout.")
     public override init(frame: CGRect, collectionViewLayout layout: UICollectionViewLayout) {
         super.init(frame: frame, collectionViewLayout: UICollectionViewFlowLayout())
         setupNewLayout(from: collectionViewLayout as! JTAppleCalendarLayoutProtocol)
     }
-    
+
     /// Initializes using decoder object
     required public init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
@@ -111,21 +111,13 @@ open class JTAppleCalendarView: UICollectionView {
     /// Lays out subviews.
     override open func layoutSubviews() {
         super.layoutSubviews()
-        
-        if (collectionViewLayout as! JTAppleCalendarLayout).lastSetCollectionViewSize != frame {
-            // ive seen that layout subview gets called. Calendar is setup, and then it gets called again
-            // At this point, it already has generaed cells which needs to be invalidated.
-            calendarViewLayout.invalidateLayout()
-            layoutIfNeeded()
-        }
-        
         if !delayedExecutionClosure.isEmpty, isCalendarLayoutLoaded {
             executeDelayedTasks()
         }
     }
     
-    func setupMonthInfoAndMap() {
-        theData = setupMonthInfoDataForStartAndEndDate()
+    func setupMonthInfoAndMap(with data: ConfigurationParameters? = nil) {
+        theData = setupMonthInfoDataForStartAndEndDate(with: data)
     }
     
     // Configuration parameters from the dataSource
@@ -402,8 +394,8 @@ open class JTAppleCalendarView: UICollectionView {
     }
     
     // Only reload the dates if the datasource information has changed
-    func reloadDelegateDataSource() -> Bool {
-        var retval = false
+    func reloadDelegateDataSource() -> (shouldReload: Bool, configParameters: ConfigurationParameters?) {
+        var retval: (Bool, ConfigurationParameters?) = (false, nil)
         if let
             newDateBoundary = calendarDataSource?.configureCalendar(self) {
             // Jt101 do a check in each var to see if
@@ -412,19 +404,29 @@ open class JTAppleCalendarView: UICollectionView {
             let newEndOfMonth   = calendar.endOfMonth(for: newDateBoundary.endDate)
             let oldStartOfMonth = calendar.startOfMonth(for: startDateCache)
             let oldEndOfMonth   = calendar.endOfMonth(for: endDateCache)
-            let newLastMonth  = sizesForMonthSection()
-            if newStartOfMonth != oldStartOfMonth ||
-                newEndOfMonth != oldEndOfMonth ||
-                newDateBoundary.calendar != cachedConfiguration.calendar ||
-                newDateBoundary.numberOfRows != cachedConfiguration.numberOfRows ||
-                newDateBoundary.generateInDates != cachedConfiguration.generateInDates ||
-                newDateBoundary.generateOutDates != cachedConfiguration.generateOutDates ||
-                newDateBoundary.firstDayOfWeek != cachedConfiguration.firstDayOfWeek ||
+            let newLastMonth    = sizesForMonthSection()
+            let calendarLayout  = calendarViewLayout
+            
+            if
+                // ConfigParameters were changed
+                newStartOfMonth                     != oldStartOfMonth ||
+                newEndOfMonth                       != oldEndOfMonth ||
+                newDateBoundary.calendar            != cachedConfiguration.calendar ||
+                newDateBoundary.numberOfRows        != cachedConfiguration.numberOfRows ||
+                newDateBoundary.generateInDates     != cachedConfiguration.generateInDates ||
+                newDateBoundary.generateOutDates    != cachedConfiguration.generateOutDates ||
+                newDateBoundary.firstDayOfWeek      != cachedConfiguration.firstDayOfWeek ||
                 newDateBoundary.hasStrictBoundaries != cachedConfiguration.hasStrictBoundaries ||
-                lastMonthSize != newLastMonth ||
-                calendarViewLayout.updatedLayoutCellSize != calendarViewLayout.cellSize {
+                // Other layout information were changed
+                minimumInteritemSpacing  != calendarLayout.minimumInteritemSpacing ||
+                minimumLineSpacing       != calendarLayout.minimumLineSpacing ||
+                sectionInset             != calendarLayout.sectionInset ||
+                lastMonthSize            != newLastMonth ||
+                allowsDateCellStretching != calendarLayout.allowsDateCellStretching ||
+                scrollDirection          != calendarLayout.scrollDirection ||
+                calendarLayout.cellSizeWasUpdated {
                     lastMonthSize = newLastMonth
-                    retval = true
+                    retval = (true, newDateBoundary)
             }
         }
         
@@ -491,7 +493,15 @@ extension JTAppleCalendarView {
         } else {
             guard let validIndexPath = indexPath else { return }
             
-            if calendarViewLayout.thereAreHeaders && scrollDirection == .vertical {
+            var isNonConinuousScroll = true
+            switch scrollingMode {
+            case .none, .nonStopToCell: isNonConinuousScroll = false
+            default: break
+            }
+            
+            if calendarViewLayout.thereAreHeaders,
+                scrollDirection == .vertical,
+                isNonConinuousScroll {
                 scrollToHeaderInSection(validIndexPath.section,
                                         triggerScrollToDateDelegate: triggerScrollToDateDelegate,
                                         withAnimation: isAnimationEnabled,
@@ -617,12 +627,15 @@ extension JTAppleCalendarView {
         return retval
     }
     
-    func setupMonthInfoDataForStartAndEndDate() -> CalendarData {
+    func setupMonthInfoDataForStartAndEndDate(with config: ConfigurationParameters? = nil) -> CalendarData {
         var months = [Month]()
         var monthMap = [Int: Int]()
         var totalSections = 0
         var totalDays = 0
-        if let validConfig = calendarDataSource?.configureCalendar(self) {
+        
+        var validConfig = config
+        if validConfig == nil { validConfig = calendarDataSource?.configureCalendar(self) }
+        if let validConfig = validConfig {
             let comparison = validConfig.calendar.compare(validConfig.startDate, to: validConfig.endDate, toGranularity: .nanosecond)
             if comparison == ComparisonResult.orderedDescending {
                 assert(false, "Error, your start date cannot be greater than your end date\n")
@@ -787,6 +800,7 @@ extension JTAppleCalendarView {
         var invisiblePathsToRelad: [IndexPath] = []
         
         for path in indexPaths {
+            if calendarViewLayout.cachedValue(for: path.item, section: path.section) == nil { continue }
             if visiblePaths.contains(path) {
                 visiblePathsToReload.append(path)
             } else {

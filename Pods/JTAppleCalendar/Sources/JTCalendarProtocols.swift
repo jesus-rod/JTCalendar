@@ -24,7 +24,6 @@
 
 /// Default delegate functions
 public extension JTAppleCalendarViewDelegate {
-    func calendar(_ calendar: JTAppleCalendarView, shouldSelectDate date: Date, cell: JTAppleCell, cellState: CellState) -> Bool { return true }
     func calendar(_ calendar: JTAppleCalendarView, shouldSelectDate date: Date, cell: JTAppleCell?, cellState: CellState) -> Bool { return true }
     func calendar(_ calendar: JTAppleCalendarView, shouldDeselectDate date: Date, cell: JTAppleCell?, cellState: CellState) -> Bool { return true }
     func calendar(_ calendar: JTAppleCalendarView, didSelectDate date: Date, cell: JTAppleCell?, cellState: CellState) {}
@@ -115,16 +114,6 @@ public protocol JTAppleCalendarViewDelegate: class {
     ///     - indexPath: use this value when dequeing cells
     func calendar(_ calendar: JTAppleCalendarView, cellForItemAt date: Date, cellState: CellState, indexPath: IndexPath) -> JTAppleCell
 
-    /// Implement this function to use headers in your project.
-    /// Return the size for the header you wish to present
-    /// - Parameters:
-    ///     - date: Contains the startDate and endDate for
-    ///             the header that is about to be displayed
-    /// - Returns:
-    ///   CGSize: Provide the size for the header
-    ///           you wish to show for this date
-//    func calendar(_ calendar: JTAppleCalendarView, sectionHea derSizeFor range: (start: Date, end: Date), belongingTo month: Int) -> CGSize
-    
     /// Tells the delegate that the JTAppleCalendar is about to
     /// display a header. This is the point of customization for your headers
     /// - Parameters:

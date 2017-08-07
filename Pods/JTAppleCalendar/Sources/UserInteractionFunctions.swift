@@ -60,6 +60,20 @@ extension JTAppleCalendarView {
         return stateOfCell
     }
     
+    /// Returns the month status for a given date
+    /// - Parameter: date Date of the cell you want to find
+    /// - returns:
+    ///     - Month: The state of the found month
+    public func monthStatus(for date: Date) -> Month? {
+        guard
+            let calendar = cachedConfiguration?.calendar,
+            let startMonth = startOfMonthCache,
+            let monthIndex = calendar.dateComponents([.month], from: startMonth, to: date).month else {
+                return nil
+        }
+        return monthInfo[monthIndex]
+    }
+    
     /// Returns the cell status for a given point
     /// - Parameter: point of the cell you want to find
     /// - returns:
@@ -159,7 +173,7 @@ extension JTAppleCalendarView {
     /// - Parameter animation: Scroll is animated if this is set to true
     /// - Parameter completionHandler: This closure will run after
     ///                                the reload is complete
-    public func reloadData(completionHandler: (() -> Void)? = nil) {
+    public func reloadData(withanchor date: Date? = nil, completionHandler: (() -> Void)? = nil) {
         if isScrollInProgress || isReloadDataInProgress {
             delayedExecutionClosure.append {[unowned self] in
                 self.reloadData(completionHandler: completionHandler)
@@ -168,12 +182,13 @@ extension JTAppleCalendarView {
         }
         
         isReloadDataInProgress = true
+        initialScrollDate = date
         
         let selectedDates = self.selectedDates
-        let layoutNeedsUpdating = reloadDelegateDataSource()
-        if layoutNeedsUpdating {
+        let data = reloadDelegateDataSource()
+        if data.shouldReload {
             calendarViewLayout.invalidateLayout()
-            setupMonthInfoAndMap()
+            setupMonthInfoAndMap(with: data.configParameters)
             
             self.theSelectedIndexPaths = []
             self.theSelectedDates = []
@@ -191,7 +206,7 @@ extension JTAppleCalendarView {
             delayedExecutionClosure.append(validCompletionHandler)
         }
         
-        if !layoutNeedsUpdating { calendarViewLayout.shouldClearCacheOnInvalidate = false }
+        if !data.shouldReload { calendarViewLayout.shouldClearCacheOnInvalidate = false }
         super.reloadData()
         isReloadDataInProgress = false
         

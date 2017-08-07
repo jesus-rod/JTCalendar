@@ -53,8 +53,13 @@ class ViewController: UIViewController {
         calendarView.scrollingMode = .none
         calendarView.minimumInteritemSpacing = 0
         calendarView.minimumLineSpacing = 0
+        
         let someSmallerDateCellValue : CGFloat = 40.0
         calendarView.cellSize = someSmallerDateCellValue
+        
+        
+        calendarView.sectionInset.left = 15
+        calendarView.sectionInset.right = 15
         
         calendarView.register(UINib(nibName: "MonthHeader", bundle: Bundle.main),
                               forSupplementaryViewOfKind: UICollectionElementKindSectionHeader,
@@ -166,7 +171,7 @@ extension ViewController: JTAppleCalendarViewDataSource {
         let header: MonthHeader
         
         header = calendar.dequeueReusableJTAppleSupplementaryView(withReuseIdentifier: "MonthHeader", for: indexPath) as! MonthHeader
-        header.title.text = monthFormatter.string(from: date)
+        header.title.text = monthFormatter.string(from: date).uppercased()
         
         
         return header
@@ -181,8 +186,7 @@ extension ViewController: JTAppleCalendarViewDataSource {
         return MonthSize (defaultSize: 40)
     }
     
-    
-    
+
     
 }
 
@@ -215,14 +219,8 @@ extension ViewController: JTAppleCalendarViewDelegate {
             
             let orderedLimits = orderSelectedDates(withDates: [firstDate, secondDate])
             calendarView.selectDates(from: orderedLimits[0], to: orderedLimits[1],  triggerSelectionDelegate: false, keepSelectionIfMultiSelectionAllowed: true)
-            
-            
-            
-            //call animation for the bottom view
+
             showBottomView()
-            
-            
-            
         } else if firstDate != nil {
             //there is a date range selected, lets start a new range
             calendarView.deselectAllDates()
@@ -236,12 +234,19 @@ extension ViewController: JTAppleCalendarViewDelegate {
         }
         
         handleCellSelection(view: cell, cellState: cellState)
-        
     }
     
     func calendar(_ calendar: JTAppleCalendarView, shouldDeselectDate date: Date, cell: JTAppleCell?, cellState: CellState) -> Bool {
         
-        print("-->")
+        
+        //if the selected date
+        if date == firstDate {
+            secondDate = firstDate
+            showBottomView()
+            return false
+        }
+        
+        
         if firstDate != nil && secondDate != nil {
             resetDatepicker()
             firstDate = date
@@ -256,14 +261,13 @@ extension ViewController: JTAppleCalendarViewDelegate {
     }
     
     func calendar(_ calendar: JTAppleCalendarView, didDeselectDate date: Date, cell: JTAppleCell?, cellState: CellState) {
-        
-        
         handleCellSelection(view: cell, cellState: cellState)
     }
     
     func calendar(_ calendar: JTAppleCalendarView, didScrollToDateSegmentWith visibleDates: DateSegmentInfo) {
         setupViewsOfCalendar(from: visibleDates)
     }
+    
     
     
     
