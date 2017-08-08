@@ -25,6 +25,8 @@ class ViewController: UIViewController {
     @IBOutlet weak var bottomView: UIView!
     @IBOutlet weak var bottomViewHeight: NSLayoutConstraint!
     
+    var currentMonthIndex: Int?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         setupCalendarView()
@@ -196,6 +198,13 @@ extension ViewController: JTAppleCalendarViewDelegate {
         let cell = calendar.dequeueReusableJTAppleCell(withReuseIdentifier: "JTCalendarCell", for: indexPath) as! JTCollectionViewCell
         cell.dateLabel.text = cellState.text
         
+        let dataSection = cellState.dateSection()
+        if dataSection.month != currentMonthIndex {
+            currentMonthIndex = dataSection.month
+            let visibleDates = calendarView.visibleDates()
+            setupViewsOfCalendar(from: visibleDates)
+        }
+        
         if cellState.dateBelongsTo == .thisMonth {
             cell.isHidden = false
         } else {
@@ -264,9 +273,7 @@ extension ViewController: JTAppleCalendarViewDelegate {
         handleCellSelection(view: cell, cellState: cellState)
     }
     
-    func calendar(_ calendar: JTAppleCalendarView, didScrollToDateSegmentWith visibleDates: DateSegmentInfo) {
-        setupViewsOfCalendar(from: visibleDates)
-    }
+ 
     
     
     
